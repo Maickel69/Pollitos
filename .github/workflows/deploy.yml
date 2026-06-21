@@ -1,0 +1,23 @@
+name: Deploy Pollitos App
+
+on:
+  push:
+    branches:
+      - main  # Se ejecutará cada vez que subas cambios a la rama principal
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ejecutar comandos remotos por SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          port: ${{ secrets.SSH_PORT }}
+          username: root
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            cd ~/Pollitos
+            git pull origin main
+            npm install --production
+            pm2 restart app-pollitos
