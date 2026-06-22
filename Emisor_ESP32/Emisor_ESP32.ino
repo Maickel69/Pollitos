@@ -1,15 +1,19 @@
 /**
  * Firmware de Pruebas para el Emisor ESP32 con Sensor LM35
  * 
- * Este código es una versión de pruebas para que puedas probar tu hardware hoy mismo.
  * - Temperatura: Lee el sensor analógico LM35.
- * - Humedad y Amoníaco: Valores simulados (ya que no tienes los sensores físicos aún).
+ * - Humedad y Amoníaco: Valores simulados.
  * - Envío: ESP-NOW al Receptor ESP32.
  * 
  * Conexión del LM35 al ESP32:
- * - VCC (Pin izquierdo del LM35 plano frontal) -> Conectar a Vin (5V) o 3.3V del ESP32.
- * - Vout (Pin central del LM35) -> Conectar a GPIO 34 del ESP32 (ADC1).
- * - GND (Pin derecho del LM35 plano frontal) -> Conectar a GND del ESP32.
+ * - VCC -> Conectar a Vin (5V) o 3.3V del ESP32.
+ * - Vout (Pin central) -> Conectar a un pin analógico ADC1, por ejemplo: GPIO 34 (Recomendado).
+ * - GND -> Conectar a GND del ESP32.
+ * 
+ * NOTA DE SEGURIDAD DE PINES ESP32:
+ * - El pin 19 es puramente digital y no tiene ADC (Conversor Analógico-Digital). No se puede usar para el LM35.
+ * - Debes usar un pin del bloque ADC1: GPIO 32, 33, 34, 35, 36 o 39.
+ * - No uses los del bloque ADC2 (como GPIO 4, 12, 14, 15, 25, 26, 27) porque se desactivan cuando se usa ESP-NOW/Wi-Fi.
  */
 #include <WiFi.h>
 #include <esp_now.h>
@@ -25,7 +29,7 @@ const unsigned long SEND_INTERVAL = 5000;
 // ==========================================
 // CONFIGURACIÓN DE SENSORES
 // ==========================================
-#define LM35_PIN 19        // GPIO 34 (ADC1_CH6) para leer el LM35
+#define LM35_PIN 34        // ¡Usa un pin analógico ADC1 como el GPIO 34! (No uses el pin 19)
 // Estructura del paquete de datos
 struct __attribute__((packed)) TelemetryData {
     int boardId;
@@ -63,12 +67,13 @@ void setup() {
     esp_now_register_send_cb([](const uint8_t *mac_addr, esp_now_send_status_t status) {
 #endif
         Serial.print("Estado de envío ESP-NOW: ");
-        Serial.println(status == ESP_NOW_SEND_SUCCESS ? "ÉXITO (Entregado al receptor)" : "FALLO (Receptor no responde)");
+        Serial.println(status == ESP_NOW_SEND_SUCCESS ? "ÉXITO (Entregado)" : "FALLO");
     });
     // Registrar Peer (Receptor)
-    esp_now_peer_info_t peerInfo;
+    esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, receiverAddress, 6);
     peerInfo.channel = 0;  
+    peerInfo.ifidx = WIFI_IF_STA;
     peerInfo.encrypt = false;
     
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {
@@ -85,7 +90,6 @@ void loop() {
         lastSendTime = millis();
         // 1. Leer temperatura real del sensor LM35
         float adcVal = 0;
-        // Tomar promedio de 20 muestras para estabilizar
         for(int i = 0; i < 20; i++) {
             adcVal += analogRead(LM35_PIN);
             delay(5);
@@ -96,7 +100,6 @@ void loop() {
         
         // LM35 entrega 10mV por cada 1°C. Temp = mV / 10
         float temp = millivolts / 10.0;
-        // Limitar temperatura a valores razonables en caso de falsos contactos
         if (temp < 0.0 || temp > 100.0) temp = 0.0;
         // 2. Simular Humedad y Amoníaco con caminata aleatoria
         simulatedHum += (random(-50, 50) / 100.0);
@@ -114,7 +117,7 @@ void loop() {
         Serial.print(temp); Serial.print(" °C | Hum (Sim): ");
         Serial.print(simulatedHum); Serial.print(" % | NH3 (Sim): ");
         Serial.print(simulatedNh3); Serial.println(" ppm");
-        // 4. Enviar vía ESP-NOW al receptor principal
+        // Enviar datos
         esp_now_send(receiverAddress, (uint8_t *) &dataPacket, sizeof(dataPacket));
     }
 }

@@ -84,9 +84,10 @@ void setup() {
     });
 
     // Registrar Peer (Receptor)
-    esp_now_peer_info_t peerInfo;
+    esp_now_peer_info_t peerInfo = {};
     memcpy(peerInfo.peer_addr, receiverAddress, 6);
     peerInfo.channel = 0;  
+    peerInfo.ifidx = WIFI_IF_STA;
     peerInfo.encrypt = false;
     
     if (esp_now_add_peer(&peerInfo) != ESP_OK) {
