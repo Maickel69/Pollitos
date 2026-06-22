@@ -1,6 +1,6 @@
 /**
  * Firmware para el Receptor Principal (ESP32)
- * Recibe datos de los Emisores vía ESP-NOW y los envía al VPS vía HTTP POST.
+ * Recibe datos de los Emisores ESP8266 vía ESP-NOW y los envía al VPS vía HTTP POST.
  * 
  * Conexión Wi-Fi:
  * - SSID: OPPO Reno7
@@ -20,7 +20,17 @@
 // ==========================================
 const char* ssid = "OPPO Reno7";
 const char* password = "982778218";
+
+// Dirección del servidor (VPS por defecto, o IP local de tu laptop)
 const char* serverEndpoint = "http://vmi01.moondev.online/api/telemetry";
+// const char* serverEndpoint = "http://192.168.43.50:3000/api/telemetry"; // Descomenta y pon la IP de tu laptop para pruebas locales
+
+// ==========================================
+// MODO AUTO-SIMULACIÓN (Para pruebas con solo el ESP32)
+// ==========================================
+// #define SELF_SIMULATE_MODE  // Descomenta esta línea para que el ESP32 envíe datos falsos sin los emisores 8266
+unsigned long lastSimTime = 0;
+int simNode = 1;
 
 // Estructura del paquete de datos (Debe coincidir con la de los Emisores)
 struct __attribute__((packed)) TelemetryData {
@@ -56,7 +66,7 @@ void OnDataRecv(const esp_now_recv_info_t *recvInfo, const uint8_t *incomingData
         Serial.printf(" | Nodo %d: Temp: %.1f°C | Hum: %.1f%% | NH3: %.1f ppm\n", 
             tempReading.boardId, tempReading.temp, tempReading.hum, tempReading.nh3);
 
-        // Guardar en la cola para procesamiento en loop()
+        // Guardar en la cola para procesamiento asíncrono en loop()
         portENTER_CRITICAL(&queueMux);
         int nextHead = (queueHead + 1) % QUEUE_SIZE;
         if (nextHead != queueTail) { // Verificar que la cola no esté llena
@@ -82,7 +92,7 @@ void setup() {
     Serial.println(WiFi.macAddress());
 
     // 1. Inicializar y Conectar Wi-Fi
-    WiFi.mode(WIFI_AP_STA); // Modo Estación para conectar al hotspot
+    WiFi.mode(WIFI_AP_STA); // Modo híbrido para poder operar ESP-NOW y conectarse al Router
     WiFi.begin(ssid, password);
     
     Serial.print("Conectando al Wi-Fi (");
@@ -121,6 +131,31 @@ void setup() {
 // BUCLE PRINCIPAL (LOOP)
 // ==========================================
 void loop() {
+#ifdef SELF_SIMULATE_MODE
+    // Generar y enviar datos simulados cada 5 segundos para pruebas sin emisores fisicos
+    if (millis() - lastSimTime >= 5000) {
+        lastSimTime = millis();
+        TelemetryData simData;
+        simData.boardId = simNode;
+        simData.temp = 33.0 + (random(-15, 15) / 10.0);
+        simData.hum = 60.0 + (random(-50, 50) / 10.0);
+        simData.nh3 = 12.0 + (random(-40, 100) / 10.0);
+
+        Serial.printf("🤖 [Autosimulacion ESP32] Generado Nodo %d -> Temp: %.1f | Hum: %.1f | NH3: %.1f\n", 
+            simData.boardId, simData.temp, simData.hum, simData.nh3);
+
+        if (WiFi.status() == WL_CONNECTED) {
+            sendHTTPPost(simData);
+        } else {
+            Serial.println("❌ Autosimulacion: Wi-Fi Desconectado.");
+            WiFi.begin(ssid, password);
+        }
+
+        // Rotar nodos del 1 al 4
+        simNode = (simNode == 4) ? 1 : simNode + 1;
+    }
+#endif
+
     TelemetryData readingToSend;
     bool hasData = false;
 
@@ -139,11 +174,12 @@ void loop() {
             sendHTTPPost(readingToSend);
         } else {
             Serial.println("❌ Intento de envío omitido: Wi-Fi Desconectado.");
+            // Reintentar conexión Wi-Fi en segundo plano
             WiFi.begin(ssid, password);
         }
     }
     
-    delay(50); // Pequeño respiro
+    delay(50); // Pequeño respiro para evitar saturación del procesador
 }
 
 // ==========================================
