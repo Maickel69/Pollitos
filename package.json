@@ -18,6 +18,8 @@
   },
   "homepage": "https://github.com/Maickel69/Pollitos#readme",
   "dependencies": {
-    "express": "^5.2.1"
+    "cors": "^2.8.5",
+    "express": "^5.2.1",
+    "sqlite3": "^5.1.7"
   }
 }

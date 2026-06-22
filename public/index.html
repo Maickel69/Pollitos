@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema inteligente de monitoreo en tiempo real para galpones de pollitos. Supervisión de temperatura, humedad y concentración de amoníaco (NH3) para tesis universitaria.">
+    <title>Pollitos App - Sistema Inteligente de Monitoreo Avícola</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="styles.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Pantalla de Login (Overlay) -->
+    <div class="login-overlay" id="login-overlay">
+        <div class="login-card">
+            <div class="login-header-logo">
+                <i class="fa-solid fa-feather-pointed"></i>
+                <h2>Pollitos App</h2>
+                <p>Acceso Seguro al Galpón</p>
+            </div>
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <label for="login-username"><i class="fa-solid fa-user"></i> Usuario</label>
+                    <input type="text" id="login-username" placeholder="Ingresa tu usuario" required autocomplete="username">
+                </div>
+                <div class="form-group">
+                    <label for="login-password"><i class="fa-solid fa-lock"></i> Contraseña</label>
+                    <input type="password" id="login-password" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+                </div>
+                <div class="error-msg" id="login-error-msg">Usuario o contraseña incorrectos.</div>
+                <button type="submit" class="login-submit-btn">
+                    <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Contenedor Principal de la App (Oculto inicialmente hasta el login) -->
+    <div class="app-container hidden" id="app-content-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-area">
+                <div class="logo-icon">
+                    <i class="fa-solid fa-feather-pointed"></i>
+                </div>
+                <div>
+                    <h1>Pollitos App</h1>
+                    <p class="subtitle">Monitoreo Bioambiental en Tiempo Real</p>
+                </div>
+            </div>
+
+            <!-- Semana de vida del pollito selector -->
+            <div class="week-selector-container">
+                <label for="week-select" class="selector-label">
+                    <i class="fa-solid fa-calendar-week"></i> Etapa de Crecimiento:
+                </label>
+                <select id="week-select" class="styled-select">
+                    <option value="1" selected>Semana 1 (Óptimo: 32°C - 35°C)</option>
+                    <option value="2">Semana 2 (Óptimo: 29°C - 32°C)</option>
+                    <option value="3">Semana 3 (Óptimo: 26°C - 29°C)</option>
+                </select>
+            </div>
+
+            <!-- Menú de Administración -->
+            <div class="admin-menu">
+                <button class="header-btn" id="btn-open-users" onclick="openUsersModal()">
+                    <i class="fa-solid fa-users-gear"></i> Usuarios
+                </button>
+                <button class="header-btn logout-btn" onclick="logout()">
+                    <i class="fa-solid fa-power-off"></i> Salir
+                </button>
+            </div>
+        </header>
+
+        <!-- Resumen de Alertas Globales -->
+        <div class="global-alerts-banner" id="global-alerts-badge">
+            <i class="fa-solid fa-bell"></i>
+            <span>Atención: Se han detectado <span id="active-alerts-count" class="alert-count-bold">0</span> alertas activas en los corrales.</span>
+        </div>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Grid de Tarjetas de Sensores -->
+            <section class="nodes-grid" aria-label="Nodos de Monitoreo">
+                
+                <!-- Nodo 1 -->
+                <div class="node-card" id="node-card-1">
+                    <div class="node-header">
+                        <div class="node-title">
+                            <h3>Nodo 1</h3>
+                            <span class="status-indicator offline" id="node-status-1">Sin Datos</span>
+                        </div>
+                        <div class="node-icon"><i class="fa-solid fa-cubes"></i></div>
+                    </div>
+                    <div class="node-body">
+                        <div class="metric-row temperature">
+                            <span class="metric-label"><i class="fa-solid fa-temperature-half"></i> Temperatura</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-temp-1">--</span><span class="metric-unit">°C</span>
+                            </div>
+                        </div>
+                        <div class="metric-row humidity">
+                            <span class="metric-label"><i class="fa-solid fa-droplet"></i> Humedad</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-hum-1">--</span><span class="metric-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="metric-row ammonia">
+                            <span class="metric-label"><i class="fa-solid fa-wind"></i> Amoníaco (NH₃)</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-nh3-1">--</span><span class="metric-unit">ppm</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="node-footer" id="node-footer-1">
+                        Estado: <strong class="state-text" id="node-state-1">Desconectado</strong>
+                    </div>
+                </div>
+
+                <!-- Nodo 2 -->
+                <div class="node-card" id="node-card-2">
+                    <div class="node-header">
+                        <div class="node-title">
+                            <h3>Nodo 2</h3>
+                            <span class="status-indicator offline" id="node-status-2">Sin Datos</span>
+                        </div>
+                        <div class="node-icon"><i class="fa-solid fa-cubes"></i></div>
+                    </div>
+                    <div class="node-body">
+                        <div class="metric-row temperature">
+                            <span class="metric-label"><i class="fa-solid fa-temperature-half"></i> Temperatura</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-temp-2">--</span><span class="metric-unit">°C</span>
+                            </div>
+                        </div>
+                        <div class="metric-row humidity">
+                            <span class="metric-label"><i class="fa-solid fa-droplet"></i> Humedad</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-hum-2">--</span><span class="metric-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="metric-row ammonia">
+                            <span class="metric-label"><i class="fa-solid fa-wind"></i> Amoníaco (NH₃)</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-nh3-2">--</span><span class="metric-unit">ppm</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="node-footer" id="node-footer-2">
+                        Estado: <strong class="state-text" id="node-state-2">Desconectado</strong>
+                    </div>
+                </div>
+
+                <!-- Nodo 3 -->
+                <div class="node-card" id="node-card-3">
+                    <div class="node-header">
+                        <div class="node-title">
+                            <h3>Nodo 3</h3>
+                            <span class="status-indicator offline" id="node-status-3">Sin Datos</span>
+                        </div>
+                        <div class="node-icon"><i class="fa-solid fa-cubes"></i></div>
+                    </div>
+                    <div class="node-body">
+                        <div class="metric-row temperature">
+                            <span class="metric-label"><i class="fa-solid fa-temperature-half"></i> Temperatura</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-temp-3">--</span><span class="metric-unit">°C</span>
+                            </div>
+                        </div>
+                        <div class="metric-row humidity">
+                            <span class="metric-label"><i class="fa-solid fa-droplet"></i> Humedad</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-hum-3">--</span><span class="metric-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="metric-row ammonia">
+                            <span class="metric-label"><i class="fa-solid fa-wind"></i> Amoníaco (NH₃)</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-nh3-3">--</span><span class="metric-unit">ppm</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="node-footer" id="node-footer-3">
+                        Estado: <strong class="state-text" id="node-state-3">Desconectado</strong>
+                    </div>
+                </div>
+
+                <!-- Nodo 4 -->
+                <div class="node-card" id="node-card-4">
+                    <div class="node-header">
+                        <div class="node-title">
+                            <h3>Nodo 4</h3>
+                            <span class="status-indicator offline" id="node-status-4">Sin Datos</span>
+                        </div>
+                        <div class="node-icon"><i class="fa-solid fa-cubes"></i></div>
+                    </div>
+                    <div class="node-body">
+                        <div class="metric-row temperature">
+                            <span class="metric-label"><i class="fa-solid fa-temperature-half"></i> Temperatura</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-temp-4">--</span><span class="metric-unit">°C</span>
+                            </div>
+                        </div>
+                        <div class="metric-row humidity">
+                            <span class="metric-label"><i class="fa-solid fa-droplet"></i> Humedad</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-hum-4">--</span><span class="metric-unit">%</span>
+                            </div>
+                        </div>
+                        <div class="metric-row ammonia">
+                            <span class="metric-label"><i class="fa-solid fa-wind"></i> Amoníaco (NH₃)</span>
+                            <div class="metric-value-container">
+                                <span class="metric-value" id="node-nh3-4">--</span><span class="metric-unit">ppm</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="node-footer" id="node-footer-4">
+                        Estado: <strong class="state-text" id="node-state-4">Desconectado</strong>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sección de Gráficos e Historial -->
+            <section class="analytics-section">
+                <!-- Gráfico de Tendencias -->
+                <div class="chart-container-card">
+                    <div class="chart-header">
+                        <h2><i class="fa-solid fa-chart-line"></i> Historial Ambiental Reciente</h2>
+                        <div class="chart-controls">
+                            <button id="btn-chart-temp" class="chart-btn active" onclick="switchChartType('temp')">Temperatura</button>
+                            <button id="btn-chart-hum" class="chart-btn" onclick="switchChartType('hum')">Humedad</button>
+                            <button id="btn-chart-nh3" class="chart-btn" onclick="switchChartType('nh3')">Amoníaco (NH₃)</button>
+                        </div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="historyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Historial de Alertas / Logs -->
+                <div class="logs-container-card">
+                    <div class="log-header">
+                        <h2><i class="fa-solid fa-triangle-exclamation"></i> Bitácora de Alertas del Corral</h2>
+                        <button class="clear-logs-btn" id="btn-clear-logs" onclick="clearLocalAlertLog()">Limpiar</button>
+                    </div>
+                    <div class="log-body">
+                        <ul class="alert-log-list" id="alert-log-list">
+                            <li class="empty-log-msg">No se han registrado anomalías.</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>Pollitos App v2.0 | Servidor VPS activo en el puerto 3000 | Conexión remota a Google Drive (Sheets)</p>
+            <p class="thesis-note">Dataset de Tesis en ejecución continua 24/7</p>
+        </footer>
+    </div>
+
+    <!-- MODAL DE ADMINISTRACIÓN DE USUARIOS -->
+    <div class="modal-overlay hidden" id="users-modal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2><i class="fa-solid fa-users-gear animate-spin"></i> Gestión de Usuarios</h2>
+                <button class="close-modal-btn" onclick="closeUsersModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Formulario crear usuario -->
+                <form id="create-user-form" class="modal-form">
+                    <h3>Registrar Nuevo Acceso</h3>
+                    <div class="form-row">
+                        <input type="text" id="new-username" placeholder="Nombre de usuario" required autocomplete="off">
+                        <input type="password" id="new-password" placeholder="Contraseña" required autocomplete="off">
+                        <button type="submit" class="add-user-btn"><i class="fa-solid fa-user-plus"></i> Añadir</button>
+                    </div>
+                    <div class="error-msg" id="create-error-msg">Error al crear usuario.</div>
+                    <div class="success-msg" id="create-success-msg">Usuario creado correctamente.</div>
+                </form>
+
+                <!-- Tabla de usuarios existentes -->
+                <div class="users-list-container">
+                    <h3>Usuarios Autorizados</h3>
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Fecha Registro</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <!-- Inyectado dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "googleSheetsUrl": "",
+  "nh3Threshold": 20.0,
+  "apiKey": "PollitosSecureIoTKey2026",
+  "jwtSecret": "PollitosSecretJWTKey2026"
+}
