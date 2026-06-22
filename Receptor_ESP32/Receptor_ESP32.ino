@@ -12,6 +12,7 @@
 
 #include <WiFi.h>
 #include <esp_now.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h> // Requiere tener instalada la librería "ArduinoJson" por Benoit Blanchon (v6 o v7)
 
@@ -22,7 +23,7 @@ const char* ssid = "OPPO Reno7";
 const char* password = "982778218";
 
 // Dirección del servidor (VPS por defecto, o IP local de tu laptop)
-const char* serverEndpoint = "http://vmi01.moondev.online/api/telemetry";
+const char* serverEndpoint = "https://vmi01.moondev.online/api/telemetry";
 // const char* serverEndpoint = "http://192.168.43.50:3000/api/telemetry"; // Descomenta y pon la IP de tu laptop para pruebas locales
 
 // ==========================================
@@ -186,10 +187,13 @@ void loop() {
 // ENVIAR LECTURAS AL SERVIDOR VPS (HTTP POST)
 // ==========================================
 void sendHTTPPost(TelemetryData data) {
+    WiFiClientSecure client;
+    client.setInsecure(); // Saltar validación SSL para evitar gestionar certificados CA
+
     HTTPClient http;
     
-    // Iniciar conexión al endpoint del VPS
-    http.begin(serverEndpoint);
+    // Iniciar conexión al endpoint del VPS usando HTTPS seguro (inseguro de manera local)
+    http.begin(client, serverEndpoint);
     http.addHeader("Content-Type", "application/json");
     http.addHeader("X-API-Key", "PollitosSecureIoTKey2026");
 
