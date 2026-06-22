@@ -21,8 +21,8 @@
 #define BOARD_ID 1  // Cambiar a 1, 2, 3 o 4 según corresponda
 
 // Dirección MAC del ESP32 Receptor (Modificar con la MAC real de tu receptor)
-// Ejemplo actual: B0:CB:D8:E6:26:3C (debe especificarse en bytes)
-uint8_t receiverAddress[] = {0xB0, 0xCB, 0xD8, 0xE6, 0x26, 0x3C};
+// Ejemplo actual: 00:70:07:7e:61:a8 (debe especificarse en bytes)
+uint8_t receiverAddress[] = {0x00, 0x70, 0x07, 0x7E, 0x61, 0xA8};
 
 // Frecuencia de envío (5 segundos para requerimiento de alerta inmediata)
 const unsigned long SEND_INTERVAL = 5000; 
