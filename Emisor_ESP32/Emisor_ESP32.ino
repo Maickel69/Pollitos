@@ -127,8 +127,12 @@ void setup() {
     }
     Serial.println("✅ ESP-NOW inicializado.");
 
-    // Registrar callback de envío
+    // Registrar callback de envío (compatible con ESP32 Core v2.x y v3.x)
+#if ESP_ARDUINO_VERSION >= ESP_ARDUINO_VERSION_VAL(3, 0, 0)
+    esp_now_register_send_cb([](const wifi_tx_info_t *tx_info, esp_now_send_status_t status) {
+#else
     esp_now_register_send_cb([](const uint8_t *mac_addr, esp_now_send_status_t status) {
+#endif
         Serial.print("Estado de envío: ");
         Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Éxito" : "Fallo");
     });
