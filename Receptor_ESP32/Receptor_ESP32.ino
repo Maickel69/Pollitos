@@ -88,6 +88,8 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
     Serial.println("\n--- Receptor Principal ESP32 Iniciado ---");
+    Serial.print("Dirección MAC del ESP32: ");
+    Serial.println(WiFi.macAddress());
 
     // 1. Inicializar y Conectar Wi-Fi
     WiFi.mode(WIFI_AP_STA); // Modo híbrido para poder operar ESP-NOW y conectarse al Router
